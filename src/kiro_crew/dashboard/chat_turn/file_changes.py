@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         safe_read_file,
         validate_file_path,
     )
+    from kiro_crew.dashboard.chat_turn.regenerate_swap import note_regenerate_reply
 
 
 class _Snapshot(NamedTuple):
@@ -1027,6 +1028,9 @@ def _note_reply_row(slot: "_ChatSlot", row: dict[str, Any]) -> None:
         if len(mids) >= _MAX_SLOT_MESSAGES:
             del mids[0]
         mids.append(mid)
+    # A Regenerate turn replaces the previous reply with its first reply row at
+    # the turn's end; this is how that step learns which row it is.
+    note_regenerate_reply(slot, row)
 
 
 # ── File-chip snapshots ────────────────────────────────────────────────────
