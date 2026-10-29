@@ -268,6 +268,8 @@ describe('SessionStorageScreen (inventory)', () => {
     await userEvent.click(screen.getByRole('button', { name: /Move to Trash/ }))
 
     await waitFor(() => expect(screen.getByText(/could not be moved/)).toBeTruthy())
+    // One refusal is counted in the singular.
+    expect(screen.getByText('1 session could not be moved')).toBeTruthy()
     // The refusal line carries the session's title and the reason…
     expect(screen.getByText(/Refactor the ACP adapter: .*in use/i)).toBeTruthy()
     // …and does not print the id.

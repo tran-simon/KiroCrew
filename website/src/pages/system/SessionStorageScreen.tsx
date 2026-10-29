@@ -439,7 +439,7 @@ export default function SessionStorageScreen({ onBack }: { onBack: () => void })
           {refused.length > 0 && (
             <div className="bg-bg-elevated border border-border rounded-md px-3 py-2 text-[12px]">
               <div className="font-medium text-text-strong mb-1">
-                {i18nT('pages.sessionStorage.refused_heading', { count: fmtNumber(refused.length) })}
+                {i18nT('pages.sessionStorage.refused_heading', { count: refused.length, n: fmtNumber(refused.length) })}
               </div>
               {refused.map(r => (
                 <div key={r.uid} className="text-muted">
