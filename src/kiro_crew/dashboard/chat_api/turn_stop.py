@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     import time
 
     from kiro_crew.dashboard.chat_handlers import (
+        RESTORED_QUEUE_KEY,
+        RESTORED_SEND_CHOSEN_KEY,
         DashboardState,
         _app_cancel_denied,
         _ChatSlot,
@@ -1090,7 +1092,12 @@ async def api_chat_slot_interrupt(request: web.Request) -> web.Response:
         # own /interrupt may have promoted ITS selection, and a stale write
         # here would overwrite it. Escalation keeps the same generation and a
         # cleared queue, so promotion there is a harmless no-op.
-        slot.queue_promote_by_id(queue_id)
+        #
+        # The turn's end drains with no card named, and that drain holds every
+        # restored entry for the user. This click IS the user sending the card,
+        # so mark it chosen; it keeps its restored provenance otherwise.
+        if slot.queue_promote_by_id(queue_id) and slot._queue[0].get(RESTORED_QUEUE_KEY):
+            slot._queue[0][RESTORED_SEND_CHOSEN_KEY] = True
 
     # A concurrent /stop can supersede our claim during the body await:
     # escalate it (soft_pending → killing), or escalate-settle-and-be-followed
