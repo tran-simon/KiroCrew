@@ -360,6 +360,20 @@ class WorkLedgerConfig:
             "at the levels it removes are refused.",
         ),
     )
+    remote_dispatch: bool = field(
+        default=False,
+        metadata=_meta(
+            "Remote dispatch (preview)",
+            "When true, a conductor in the owner's own dashboard tab may pass `crew=` to "
+            "session_create, session_send, session_read_message, session_stop and "
+            "session_close to drive a worker session on a connected remote crew "
+            "(rfc-conductor-remote-dispatch.md). Off by default: the tools do not "
+            "advertise `crew` and a call carrying it is refused with "
+            "`remote_dispatch_disabled`. Read on every call, so a change applies "
+            "without a restart; a session already running sees the new tool schema "
+            "the next time it lists its tools.",
+        ),
+    )
 
 
 #: ``power.on_battery`` values. ``normal`` ignores the power source.

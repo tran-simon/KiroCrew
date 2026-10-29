@@ -692,6 +692,7 @@ member-memory sandbox is required.
 | Key | Description | Default |
 |-----|-------------|---------|
 | `work_ledger.max_depth` | How many levels of the work ledger may conduct. Depth 0 is the root conductor, so `2` lets it dispatch one level of conductors whose own items are workers, and `3` lets those conductors dispatch conductors of their own. Accepted range 2-10; a value outside it is refused at load with a warning and the default applies, it is never clamped. Each extra level multiplies sessions (three levels of three items is 27), so raise it only where concurrency is already capped per level. Lowering it leaves open ledgers alone, but new ledgers and new items at the levels it removes are refused. | `2` |
+| `work_ledger.remote_dispatch` | Preview. When `true`, a conductor in the owner's own dashboard tab may pass `crew=` (a connected crew's instance id or exact name) to `session_create`, `session_send`, `session_read_message`, `session_stop` and `session_close` to run a worker session on that crew. Every call is refused with `crew_owner_unverifiable` until the gateway records which person sent a turn, so turning this on does not yet make `crew=` usable. Read on every call, no restart. When `false`, the tools do not offer `crew` and a call carrying it is refused with `remote_dispatch_disabled`. | `false` |
 
 ### Power
 
