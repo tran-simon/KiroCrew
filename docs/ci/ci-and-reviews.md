@@ -1224,6 +1224,72 @@ reading one leg per pull request off the matrix. A stuck leg rolls back the same
 way as any other site: restore `runs-on: ${{ matrix.os }}` on the affected line,
 which returns all three legs to the hosted images in one edit.
 
+#### Twelve more sites reach the group by LABEL, not by group
+
+These are additional to the sites counted above, and they spell the target
+differently: `runs-on: ${{ github.repository == 'kirodotdev/KiroCrew' &&
+'kirocrew-linux-4-core' || 'ubuntu-latest' }}`.
+
+| Workflow | Job |
+|---|---|
+| `gui-user-test.yml` | `gui-user-test` |
+| `issue-summary.yml` | `summarize` |
+| `issue-triage.yml` | `triage` |
+| `main-macos-failure-watch.yml` | `page` |
+| `main-red-pr-notice.yml` | `notice` |
+| `main-red-watch.yml` | `watch` |
+| `pr-readiness-sweep.yml` | `sweep` |
+| `nightly.yml` | `version`, `pod-scenarios` (Linux leg only), `process-leak-invariant` |
+| `build-desktop.yml` | `smoke-linux-packages` |
+| `build-ffmpeg-decoder.yml` | `publish` |
+
+**Why the label here, against the group preference above.** A group resolves
+only inside the organization that owns it. A fork running its own copy of one of
+these workflows would find no runner and wait forever, because nothing falls
+back. The label form carries its own fork fallback in the `||` leg, which is
+the whole reason to accept the rename fragility the paragraph above describes:
+if `kirocrew-linux-4-core` is renamed, these twelve lines break together and
+every one of them must be updated, where a `group:` reference would have
+survived. That is the trade, and it only pays where a fork can reach the
+workflow at all.
+
+**None of the twelve can hold a verdict pending.** None appears in
+`pr-readiness.yml`'s `workflow_specs` or in `merge-queue-readiness.yml`'s
+polled list, so none is a lane whose unfinished run keeps the required
+`PR Readiness` status pending. That is a different and weaker claim than "off
+the merge path", and for one of them it is the only claim that holds -- see
+the sweep below.
+
+Most never see a `pull_request` event at all: `issue-summary` and
+`issue-triage` fire on `issues`, `nightly`'s three jobs on `schedule` and
+`workflow_dispatch`, the three watchers on `workflow_run`, and
+`pr-readiness-sweep` on `schedule`. Two do see one and still occupy nothing.
+`build-desktop.yml` declares only `workflow_call`, so `smoke-linux-packages`
+runs for a caller that invokes it rather than on a pull request of its own.
+`build-ffmpeg-decoder.yml` genuinely fires on `pull_request`, paths-filtered to
+`scripts/build-ffmpeg.sh` and the workflow file, but its `publish` job is gated
+`if: inputs.publish`, and an input exists only on a `workflow_dispatch`, so on
+every pull-request run that job is skipped before a runner starts.
+
+**`pr-readiness-sweep` is the exception, and its queue time is on the merge
+path.** The sweep is how a completed lane reaches the `PR Readiness` verdict at
+all: `pr-readiness.yml` does not subscribe to the `completed` event of the
+workflows it monitors, so the scheduled sweep is what re-fires the recompute.
+A sweep that waits for a runner therefore delays a green verdict reaching the
+required status. It cannot make a verdict wrong, because the recompute is
+idempotent and stale-SHA guarded, and it cannot turn a red into a merge. But
+"nothing gets faster" below is about job duration, and queue position is
+exactly what this one job's delivery latency is made of, so moving it off the
+shared pool is the one case in this group where the move is also a latency
+argument.
+
+**Nothing gets faster**, for the reason the section above gives: same CPU and
+memory as a public-repository `ubuntu-latest`, so job durations should not
+move; only queue position does. Larger-runner minutes are billed even on a
+public repository, where standard runners are free and unlimited. Rollback is
+the same one-line move back to `runs-on: ubuntu-latest`, dropping the fork leg
+with it.
+
 **What is deliberately still on `ubuntu-latest`.** `security-scope-review.yml`
 is itself on that lane's own scope surface, so a diff touching it sets
 `in_scope=true` while giving the model no shell, flow or cron surface to propose
