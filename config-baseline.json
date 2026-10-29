@@ -5353,7 +5353,8 @@
       "hasChildren": true,
       "enumValues": null,
       "defaultValue": {
-        "max_depth": 2
+        "max_depth": 2,
+        "remote_dispatch": false
       }
     },
     {
@@ -5369,6 +5370,20 @@
       "hasChildren": false,
       "enumValues": null,
       "defaultValue": 2
+    },
+    {
+      "path": "work_ledger.remote_dispatch",
+      "kind": "core",
+      "type": "boolean",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "label": "Remote dispatch (Feature Preview)",
+      "help": "When true, turns on the conductor remote-dispatch preview (rfc-conductor-remote-dispatch). Today that is the 'reply' worker status: a worker answers a conductor's follow-up with work_report status=reply, which needs no evidence, claims nothing finished, and wakes the conductor. When false (the default) 'reply' is refused as an unknown status and nothing else changes. Read on every call, so no restart is needed; a worker session started while it was off advertises the old status list until it restarts.",
+      "hasChildren": false,
+      "enumValues": null,
+      "defaultValue": false
     },
     {
       "path": "power",

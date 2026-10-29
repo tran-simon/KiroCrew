@@ -353,6 +353,20 @@ class WorkLedgerConfig:
             "at the levels it removes are refused.",
         ),
     )
+    remote_dispatch: bool = field(
+        default=False,
+        metadata=_meta(
+            "Remote dispatch (Feature Preview)",
+            "When true, turns on the conductor remote-dispatch preview "
+            "(rfc-conductor-remote-dispatch). Today that is the 'reply' worker status: "
+            "a worker answers a conductor's follow-up with work_report status=reply, "
+            "which needs no evidence, claims nothing finished, and wakes the "
+            "conductor. When false (the default) 'reply' is refused as an unknown "
+            "status and nothing else changes. Read on every call, so no restart is "
+            "needed; a worker session started while it was off advertises the old "
+            "status list until it restarts.",
+        ),
+    )
 
 
 #: ``power.on_battery`` values. ``normal`` ignores the power source.

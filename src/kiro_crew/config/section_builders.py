@@ -203,9 +203,18 @@ def _build_watchdog_config(watchdog_data: dict) -> WatchdogConfig:
 
 
 def _build_work_ledger_config(work_ledger_data: dict) -> WorkLedgerConfig:
+    remote_dispatch = _safe_bool(
+        work_ledger_data.get("remote_dispatch"), field_default(WorkLedgerConfig, "remote_dispatch")
+    )
+    return WorkLedgerConfig(
+        max_depth=_work_ledger_max_depth(work_ledger_data), remote_dispatch=remote_dispatch
+    )
+
+
+def _work_ledger_max_depth(work_ledger_data: dict) -> int:
     default = field_default(WorkLedgerConfig, "max_depth")
     if "max_depth" not in work_ledger_data:
-        return WorkLedgerConfig(max_depth=default)
+        return default
     raw = work_ledger_data["max_depth"]
     depth = _safe_int(raw, -1)  # -1 is below the floor, so an unreadable value is refused
     # Refused, not clamped: a clamped cap would read as configured while allowing a
@@ -218,8 +227,8 @@ def _build_work_ledger_config(work_ledger_data: dict) -> WorkLedgerConfig:
             WORK_MAX_DEPTH_MAX,
             default,
         )
-        return WorkLedgerConfig(max_depth=default)
-    return WorkLedgerConfig(max_depth=depth)
+        return default
+    return depth
 
 
 # ---------------------------------------------------------------------------
