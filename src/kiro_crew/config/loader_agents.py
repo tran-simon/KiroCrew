@@ -93,7 +93,36 @@ def resolve_crew_identity(
         # diagnosable from logs.
         logger.debug("crew_agent %r resolved by crew-namespace fallback", agent)
         return agent
+    key = _crew_key_for_handle(config, agent)
+    if key:
+        logger.debug("crew_agent %r resolved to crew key %r by member handle", agent, key)
+        return key
     return ""
+
+
+def _crew_key_for_handle(
+    config: "KiroCrewConfig", handle: str | None, project_dir=None, *, member_only: bool = False
+) -> str:
+    """The ``config.agents`` key of the crew whose ``member_id`` is *handle*, else ``""``.
+
+    A record is stored under one key -- its display name when it predates
+    id-keyed crews, its ``member_id`` otherwise -- and is never re-keyed. A
+    surface holding the record's ``member_id`` instead of its key is answered
+    with the key, so the record and everything stored under the key resolve.
+    The ``display_name`` label is presentation only and never resolves a crew,
+    so a relabel cannot move a binding. A name a materialized kiro agent declares stays a template
+    name: this lookup never turns a template session into a crewmate one. A
+    selection already stated to be a crewmate (*member_only*) names no template,
+    so that check is skipped for it.
+    """
+    if not handle:
+        return ""
+    if not member_only and _materialized_kiro_agent(handle, project_dir):
+        return ""
+    from kiro_crew.members_parts.member_space import _member_key_for_handle
+
+    key = _member_key_for_handle(handle, config.agents)
+    return key if key != handle and key in config.agents else ""
 
 
 def _resolve_agent_selection(config, agent_name=None, project_dir=None, *, selection_kind=""):
@@ -113,6 +142,15 @@ def _resolve_agent_selection(config, agent_name=None, project_dir=None, *, selec
     alias_hit = selection_kind != "template" and bool(agent_name) and agent_name in config.agents
     if alias_hit:
         return config.agents[agent_name], agent_name, "", True
+    handle_key = (
+        _crew_key_for_handle(
+            config, agent_name, project_dir, member_only=selection_kind == "member"
+        )
+        if selection_kind != "template"
+        else ""
+    )
+    if handle_key:
+        return config.agents[handle_key], handle_key, "", True
     fallback = default_template(config)
     passthrough = (
         "" if selection_kind == "member" else _materialized_kiro_agent(agent_name, project_dir)

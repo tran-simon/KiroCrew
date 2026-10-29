@@ -459,6 +459,9 @@ def canonical_member_key(name: str, config=None) -> str:
     one: those two already collide at the slug level, and the surfaces that care
     refuse that slug outright (``dashboard_slug_ambiguous``). Guessing here would
     turn a refusal into a write on whichever key sorted first.
+
+    When no key matches even by case, *name* is tried as a member id: the key of
+    the one record whose ``member_id`` is *name* (:func:`_member_key_for_handle`).
     """
     if not isinstance(name, str) or not name:
         return name
@@ -471,7 +474,31 @@ def canonical_member_key(name: str, config=None) -> str:
         return name
     folded = name.casefold()
     hits = [key for key in agents if isinstance(key, str) and key.casefold() == folded]
-    return hits[0] if len(hits) == 1 else name
+    if hits:
+        return hits[0] if len(hits) == 1 else name
+    return _member_key_for_handle(name, agents)
+
+
+def _member_key_for_handle(handle: str, agents: Mapping[str, object]) -> str:
+    """The key of the one record whose ``member_id`` is *handle*, else *handle*.
+
+    A record created before crews were keyed by id is keyed by its display name
+    and carries its id as ``member_id``. The record is never re-keyed, so a
+    caller holding the member's id is answered with the key the record is
+    stored under, and every store keyed by that key keeps resolving. The
+    ``display_name`` label is presentation only and is never matched.
+
+    Exact comparison only, and only a unique hit counts, the rule
+    ``execution_context.member_config_for_id`` applies: two records carrying
+    one id return *handle* unchanged, so a lookup never guesses which member's
+    thread or memory it addresses.
+    """
+    hits = [
+        key
+        for key, agent in agents.items()
+        if isinstance(key, str) and getattr(agent, "member_id", "") == handle
+    ]
+    return hits[0] if len(hits) == 1 else handle
 
 
 def member_slug(name: str, config=None) -> str:
