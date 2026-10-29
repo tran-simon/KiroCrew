@@ -32,7 +32,7 @@ import bisect
 import os
 import re
 import shlex
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from kiro_crew.trust_patterns import ENV_ASSIGNMENT_RE
 
@@ -52,6 +52,7 @@ from .shell_normalizer_programs import (  # noqa: F401  (also re-exported for im
 )
 from .shell_normalizer_redirects import (  # noqa: F401  (also re-exported for importers)
     _ARRAY_EXPAND_RE,
+    _CARRIER_SPLIT_WINDOW,
     _OUTPUT_REDIRECT_RE,
     _REDIRECT_START_RE,
     _SHELL_COMMAND_FLAG_RE,
@@ -856,8 +857,13 @@ def _is_self_program(token: str) -> bool:
     return _glob_could_expand_to(base, _SELF_PROGRAM_SPELLINGS)
 
 
-def _self_tokens(text_lower: str) -> "list[str]":
+def _self_tokens(text_lower: str, *, resolve: bool = True, glued: bool = False) -> "list[str]":
     """Tokenize the WHOLE command, resolving quoting before any splitting.
+
+    *resolve* False stops before the assignment and alias resolution, so a quoted
+    script stays the one token its carrier receives (see
+    :func:`_quoted_assignment_scripts`).  *glued* reads a long first assignment
+    name under its suffixes (see :class:`_GluedBindings`).
 
     Splitting the raw text into segments first (as the pattern passes do) is
     unsafe for these rules: it cuts on a ``;`` or ``|`` that is INSIDE a quoted
@@ -892,11 +898,128 @@ def _self_tokens(text_lower: str) -> "list[str]":
                 " ; " if step.active and step.char == "\n" else step.text
                 for step in _iter_shell_chars(command)
             )
-        return _resolve_function_aliases(
-            _resolve_local_assignments(normalize_shell_command(command))
-        )
+        tokens = normalize_shell_command(command)
+        if not resolve:
+            return tokens
+        return _resolve_function_aliases(_resolve_local_assignments(tokens, glued=glued))
     except Exception:
         return []
+
+
+def _quoted_assignment_scripts(source: str) -> "list[str]":
+    """Carrier payloads of *source* that are a whole quoted script opening with an assignment.
+
+    ``bash -c '<name>=<cli>; $<name> <verb>'`` hands the whole script to ``-c`` as
+    one token.  The frame's assignment resolver splits that token at its inner
+    ``;`` (:func:`_split_glued_operators` splits any token that begins with an
+    assignment and carries a control operator), so the payload walk, which takes
+    the ONE token after the carrier, descended only ``<name>=<cli>`` and the
+    script's own command line, where the ``;`` IS an operator and ``$<name>``
+    resolves, was never examined.  This reads the carriers from the tokens
+    BEFORE that split, and keeps only the payloads the split would shred, so the
+    walk descends the whole script as its own command line as well.  It only adds
+    frames: every frame the resolved view yields is still walked.
+
+    A script that is only an ARGUMENT of a data consumer (``printf '%s\\n' bash -c
+    '<script>'`` prints it) is not walked, by the per-occurrence data-consumer rule
+    the deny gate's own payload walk applies: it is skipped only when every
+    occurrence sits in a data consumer's argv and the command pipes into no
+    evaluator, so a payload that may run is still descended.
+    """
+    if "=" not in source:
+        return []
+    raw = _self_tokens(source, resolve=False)
+    scripts = [
+        payload
+        for payload in _nested_shell_payloads(raw, allow_join=False)
+        if _LOCAL_ASSIGN_RE.match(payload) and _CONTROL_OPERATOR_RE.search(payload)
+    ]
+    if not scripts:
+        return []
+    if _data_consumer_command_disqualified(raw):
+        return scripts
+    # The operator test of :func:`_data_consumer_exempt` is not asked here: it guards
+    # an UNQUOTED glued token whose tail runs as a new command, and that tail is
+    # already in the resolved view, which this skip never removes.
+    programs = _argv_programs(_attribution_view(raw))
+    kept: list[str] = []
+    for script in scripts:
+        occurrences = [i for i, token in enumerate(raw) if token == script]
+        if occurrences and all(
+            i > 0 and programs[i] in _DATA_CONSUMER_PROGRAMS for i in occurrences
+        ):
+            continue
+        kept.append(script)
+    return kept
+
+
+# The whitespace ``shlex`` splits on.  One of these INSIDE a token is proof the
+# token was quoted.
+_SHLEX_WHITESPACE_RE = re.compile(r"[ \t\r\n]")
+
+
+def _attribution_view(raw: "list[str]") -> "list[str]":
+    """*raw* with each token in a shape :func:`_argv_programs` attributes correctly.
+
+    A token holding ``shlex`` whitespace was quoted, so its ``;`` is data and starts
+    no command: it is replaced by an inert word.  A ``$name`` token reads as a plain
+    word bound earlier, so ``p=echo; $p bash -c '…'`` is attributed to ``echo``, but
+    only for a binding that surely holds when the use runs: one ``name=word;``
+    statement opening a ``;`` list with no ``&``/``|`` before it, and no other
+    mention of the name anywhere (a second write, ``read``, ``printf -v``, an
+    ``eval`` string, a function body).  Any doubt leaves ``$name`` unread, which
+    attributes the token to no data consumer, so the script is walked.  No binding
+    is read at all when the command sources or evaluates text.  One token in, one
+    token out, so the indexes still name *raw*'s tokens.
+    """
+    candidates: dict[str, tuple[int, str]] = {}
+    starts, unconditional = True, True
+    for index, token in enumerate(raw):
+        quoted = bool(_SHLEX_WHITESPACE_RE.search(token))
+        unconditional = unconditional and (quoted or not re.search(r"[&|]", token))
+        assign = _SHELL_ASSIGN_RE.match(token)
+        if assign and not quoted:
+            word = re.fullmatch(r"([\w./-]+);+", assign.group(3))
+            name = assign.group(1)
+            if word and starts and unconditional and not assign.group(2) and name not in candidates:
+                candidates[name] = (index, word[1])
+            else:
+                candidates[name] = (-1, "")
+        starts = not quoted and token.endswith(";")
+    if any(token in (".", "source", "eval") for token in raw):
+        candidates = {}
+    bindings: dict[str, str] = {}
+    for name, (at, value) in candidates.items():
+        mention = re.compile(rf"(?<![$\w{{]){name}\b")
+        if at >= 0 and not any(i != at and mention.search(t) for i, t in enumerate(raw)):
+            bindings[name] = value
+    view: list[str] = []
+    for index, token in enumerate(raw):
+        use = _VAR_USE_RE.fullmatch(token)
+        name = (use.group(1) or use.group(2)) if use else ""
+        late = name in bindings and candidates[name][0] < index
+        if _SHLEX_WHITESPACE_RE.search(token):
+            token = "_"
+        view.append(bindings[name] if late else token)
+    return view
+
+
+def _glued_carrier_payloads(tokens: "list[str]") -> "set[str]":
+    """The payloads of *tokens*' glued ``-c`` carriers whose first word is a long name.
+
+    Only such a payload can carry an assignment name with option letters folded
+    onto its front (see :class:`_GluedBindings`), so only its frame gets the glued
+    view.  An ordinary command whose first assignment is merely long never does.
+    """
+    out: set[str] = set()
+    for token in tokens:
+        if len(token) <= _CARRIER_SPLIT_WINDOW or not token.startswith("-"):
+            continue
+        for payload in _shell_c_carrier_payloads(token):
+            first = _SHELL_ASSIGN_RE.match(payload)
+            if first and len(first.group(1)) > _CARRIER_SPLIT_WINDOW:
+                out.add(payload)
+    return out
 
 
 def _protected_name_in_substitution(tokens: "list[str]", start: int) -> str:
@@ -1003,8 +1126,64 @@ def _mint_verb_in_substitution(tokens: "list[str]", idx: int) -> bool:
     return False
 
 
-def _resolve_local_assignments(tokens: "list[str]") -> "list[str]":
+class _GluedBindings:
+    """The resolver's name -> literal table, reading a GLUED first name under its suffixes.
+
+    A ``-c`` carrier glued to its script (``-C<flags>c'<name>=<cli>; $<name> <verb>'``)
+    folds to one letter run in which the option letters and the assignment name are
+    indistinguishable (:func:`_shell_c_carrier_payloads`).  A name LONGER than the split
+    window is only ever such a run: no rule-covered program is that long, so its
+    leading letters are flags and the name is some suffix.  Which one is decided by
+    the script's own use of it, so a use of any suffix of the first name -- separated
+    from it by letters alone -- reads that name's binding.  A use is a lookup, so the
+    cost is one suffix comparison per use: linear, where enumerating one payload per
+    referenced suffix was not.  A plain command's first word is shorter than the
+    window, so the reading never fires for it.
+    """
+
+    __slots__ = ("_values", "_glued")
+
+    def __init__(self) -> None:
+        self._values: dict[str, str] = {}
+        self._glued = ""
+
+    def glue(self, name: str) -> None:
+        """Record the FIRST name of the frame when it is longer than the split window."""
+        if len(name) > _CARRIER_SPLIT_WINDOW:
+            self._glued = name
+
+    def _key(self, name: str) -> str:
+        if name in self._values or not name or not self._glued.endswith(name):
+            return name
+        letters = self._glued[: -len(name)]
+        return self._glued if letters and letters.isascii() and letters.isalpha() else name
+
+    @overload
+    def get(self, name: str) -> "str | None": ...
+
+    @overload
+    def get(self, name: str, default: str) -> str: ...
+
+    def get(self, name: str, default: "str | None" = None) -> "str | None":
+        return self._values.get(self._key(name), default)
+
+    def __setitem__(self, name: str, value: str) -> None:
+        # Every write binds its OWN name, the glued binding is only ever READ through
+        # a suffix: folding a write onto the glued key would let ``<glued>=<cli>;
+        # a=echo`` or ``a+=zzz`` replace the mint binding the glued use still reads.
+        self._values[name] = value
+
+    def __bool__(self) -> bool:
+        return bool(self._values)
+
+
+def _resolve_local_assignments(tokens: "list[str]", *, glued: bool = False) -> "list[str]":
     """Substitute ``$VAR`` uses with a literal assigned earlier in the same command.
+
+    *glued* reads a first assignment name longer than the carrier split window
+    under its suffixes too (:class:`_GluedBindings`).  It is an ADDITIONAL view the
+    payload walk asks for beside the plain one, never a replacement: a suffix read
+    can also hide a binding, so the plain reading is always kept.
 
     Only LITERAL right-hand sides are tracked, and only assignments that appear in
     this same command text -- there is no attempt to model the ambient environment.
@@ -1015,7 +1194,7 @@ def _resolve_local_assignments(tokens: "list[str]") -> "list[str]":
     classified, so a name assembled across several assignments still resolves to the
     literal the shell will run.
     """
-    values: dict[str, str] = {}
+    values = _GluedBindings()
     out: list[str] = []
     # ``X=<name>;$X <verb>`` glues the assignment and the next command into ONE token,
     # because ``shlex`` splits on whitespace only.  Split on top-level control operators
@@ -1023,6 +1202,13 @@ def _resolve_local_assignments(tokens: "list[str]") -> "list[str]":
     tokens = _split_glued_operators(tokens)
     for idx, token in enumerate(tokens):
         assign = _LOCAL_ASSIGN_RE.match(token)
+        if idx == 0 and glued:
+            # A glued carrier's first word may be a long assignment name with the
+            # option letters in front of it (see :class:`_GluedBindings`); both the
+            # ``=`` and the ``+=`` spelling name it.
+            first = _SHELL_ASSIGN_RE.match(token)
+            if first:
+                values.glue(first.group(1))
         # ``NAME+=tail`` APPENDS, and the pattern above cannot match it at all (``+`` is
         # not a name character), so an appended PROGRAM word would be invisible here:
         # `F=fi; F+=nd; $F <fenced> -exec cat {} +` runs a `find` this resolver would never
@@ -1063,6 +1249,8 @@ def _resolve_local_assignments(tokens: "list[str]") -> "list[str]":
             # `F=` records nothing, so an append to an unset name starts from empty
             # rather than being discarded -- that was one of the seven spellings, and
             # bash builds the value the same way.
+            # The prior is read through the glued suffix, the result is written under
+            # the appended name itself (see :class:`_GluedBindings`).
             values[name] = values.get(name, "") + piece
             out.append(token)
             continue
@@ -1101,10 +1289,14 @@ def _resolve_local_assignments(tokens: "list[str]") -> "list[str]":
             # value: ``shlex`` splits on whitespace only, so ``X=name;`` arrives
             # with the operator attached.
             value = assign.group(2).strip("\"'").rstrip(";&|")
-            if value:
+            if value or glued:
                 values[assign.group(1)] = value
             out.append(token)
             continue
+        if assign and glued:
+            # An EMPTY assignment is a binding of its own name: in the glued view it
+            # must stop the suffix read (``<long>=<cli>; a=; $a`` reads empty).
+            values[assign.group(1)] = ""
         if values and "$" in token:
             # ``${!V}`` is INDIRECT: it expands to the value of the variable NAMED by
             # ``V``, so resolving it takes two hops through the same table.  Done before
@@ -1413,8 +1605,15 @@ def _nested_shell_payloads(
 # ``${a[@]}`` / ``${a[*]}`` / ``$a[@]`` -- the whole array as separate words.
 
 
-def _shell_payload_walk(text_lower: str) -> "list[tuple[str, list[str]]]":
+def _shell_payload_walk(
+    text_lower: str, *, whole_scripts: bool = True
+) -> "list[tuple[str, list[str]]]":
     """``(source, argv)`` for *text_lower* and every nested shell payload in it.
+
+    *whole_scripts* False leaves out the frames :func:`_quoted_assignment_scripts`
+    adds.  They exist for the self-protection floors, which read argv; the
+    source-text consumers (the git-publish gate, the permission-verb mention
+    scan) keep the frames they always read.
 
     ``bash -c "kirocrew token"`` tokenizes to ``['bash', '-c', 'kirocrew token']``
     -- the dangerous command is a single opaque token, so a direct scan cannot
@@ -1442,12 +1641,23 @@ def _shell_payload_walk(text_lower: str) -> "list[tuple[str, list[str]]]":
     # A frame PRODUCED by a join may not, which is what bounds the walk: see
     # ``_nested_shell_payloads``.
     pending: list[tuple[str, int, bool]] = [(text_lower, len(text_lower) + 1, True)]
+    # Frames that are a glued ``-c`` carrier's script opening with a long name: only
+    # these get the glued view (see :func:`_glued_carrier_payloads`).
+    glued_frames: set[str] = set()
     while pending:
         source, parent_len, allow_join = pending.pop()
         tokens = _self_tokens(source)
         if not tokens:
             continue
         out.append((source, tokens))
+        views = [tokens]
+        if source in glued_frames:
+            # The glued reading is one MORE view of a glued carrier's script, so it can
+            # only add a refusal: the plain view above keeps every binding as before.
+            glued = _self_tokens(source, glued=True)
+            if glued and glued != tokens:
+                out.append((source, glued))
+                views.append(glued)
         # Every substitution body is itself a command line -- command substitution
         # (``$( )``, backticks) and PROCESS substitution (``<( )``, ``>( )``) alike, since
         # bash runs the inner command in all of them.  Walking them here means the
@@ -1465,15 +1675,27 @@ def _shell_payload_walk(text_lower: str) -> "list[tuple[str, list[str]]]":
         # reads folded, and the fold preserves single-quoted and ANSI-C spans, so a
         # continuation that bash keeps literal stays literal in the body too.
         joined_here: set[str] = set()
-        nested = _nested_shell_payloads(tokens, allow_join=allow_join, joined_out=joined_here)
-        for payload in list(nested) + _substitution_bodies(_fold_line_continuations(source)):
+        nested: list[str] = []
+        carriers: set[str] = set()
+        for view in views:
+            nested += _nested_shell_payloads(view, allow_join=allow_join, joined_out=joined_here)
+            carriers |= _glued_carrier_payloads(view)
+        if whole_scripts:
+            nested += _quoted_assignment_scripts(source)
+        for payload in nested + _substitution_bodies(_fold_line_continuations(source)):
             # Descend through EVERY literal payload, to any depth.  Termination is
             # structural, not a cap: a payload is carried inside one token of its
             # parent, so it is strictly shorter than the parent's source text.
+            glued_carrier = payload in carriers
             payload = _decode_printf_escapes(payload)
-            if len(payload) >= parent_len or payload in seen:
+            # A payload already walked plainly is walked once more when it now
+            # arrives as a glued carrier's script, so it still gets its glued view.
+            again = glued_carrier and payload not in glued_frames
+            if len(payload) >= parent_len or (payload in seen and not again):
                 continue
             seen.add(payload)
+            if glued_carrier:
+                glued_frames.add(payload)
             pending.append((payload, len(source), payload not in joined_here))
     return out
 
