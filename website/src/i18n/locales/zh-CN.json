@@ -11807,6 +11807,28 @@
         "interrupted": "连接已中断",
         "give_up": "连接不稳定，请重试。"
       },
+      "gatewayNotice": {
+        "connection_lost_retrying": "连接已中断{{detail}}，正在重试…",
+        "connection_lost_give_up": "连接已中断{{detail}}，请重试。",
+        "session_busy_retrying": "会话正忙，正在重试…",
+        "session_busy_give_up": "会话正忙，请重试。",
+        "turn_stalled_recovering": "正在恢复停滞的一轮…",
+        "turn_stalled_give_up": "本轮已停滞，请重试。",
+        "tool_stalled_recovering": "工具似乎已停滞，正在恢复…",
+        "tool_stalled_give_up": "工具似乎已停滞，请重试。",
+        "session_stuck": "会话已卡住{{detail}}，请开始新的聊天。",
+        "shared_runtime_restarting": "此聊天共用的智能体进程反复重启{{detail}}，请重试。",
+        "empty_turn_give_up": "模型本轮未返回任何内容。重新发送你的消息即可继续。",
+        "empty_turn_after_recovery": "模型本轮未返回任何内容（已尝试自动恢复）。重新发送你的消息即可继续。",
+        "empty_turn_after_work": "本轮结束时没有给出最终回复。发送一条消息即可从中断处继续，已完成的步骤不会重新运行。",
+        "empty_turn_continuing": "模型连续两次未返回任何内容，将自动继续一次。",
+        "empty_turn_continuing_counted": "模型未返回任何内容，正在自动继续（第 {{n}} 次恢复，共 {{max}} 次）。",
+        "empty_turn_continuing_after_work": "本轮结束时没有给出最终回复，将从已运行的部分继续一次。",
+        "empty_turn_continuing_after_work_counted": "本轮结束时没有给出最终回复，正在从已运行的部分继续（第 {{n}} 次恢复，共 {{max}} 次）。",
+        "model_access_fallback": "你的账号无法使用模型 {{rejected}}，已改用 {{model}} 运行。",
+        "model_unavailable": "{{model}} 目前不可用，此会话改为使用 auto 运行。你可以在输入框中选择其他模型，也可以保持不变：你的模型选择会被保留，并在该模型重新可用时自动使用。",
+        "compaction_continuing": "本轮中途压缩了上下文，回复在此处中断，正在自动继续。"
+      },
       "turnBlock": {
         "earlier_step_other": "之前的 {{count}} 个步骤",
         "hide_earlier_steps": "隐藏之前的步骤",

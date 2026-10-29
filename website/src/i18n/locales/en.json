@@ -6893,6 +6893,28 @@
         "interrupted": "Connection interrupted",
         "give_up": "Connection unstable — please try again."
       },
+      "gatewayNotice": {
+        "connection_lost_retrying": "Connection lost{{detail}} — retrying…",
+        "connection_lost_give_up": "Connection lost{{detail}} — please retry.",
+        "session_busy_retrying": "Session busy — retrying…",
+        "session_busy_give_up": "Session busy — please retry.",
+        "turn_stalled_recovering": "Recovering a stalled turn…",
+        "turn_stalled_give_up": "Turn stalled — please retry.",
+        "tool_stalled_recovering": "A tool appeared stalled — recovering…",
+        "tool_stalled_give_up": "A tool appeared stalled — please retry.",
+        "session_stuck": "Session stuck{{detail}} — please start a new chat.",
+        "shared_runtime_restarting": "The agent process this chat shares kept restarting{{detail}} — please retry.",
+        "empty_turn_give_up": "The model returned nothing this turn. Just send your message again to continue.",
+        "empty_turn_after_recovery": "The model returned nothing this turn (automatic recovery was attempted). Just send your message again to continue.",
+        "empty_turn_after_work": "The turn ended without a closing reply. Send a message to continue from where it stopped — completed steps will not re-run.",
+        "empty_turn_continuing": "The model returned nothing twice — auto-continuing once.",
+        "empty_turn_continuing_counted": "The model returned nothing — auto-continuing (recovery {{n}} of {{max}}).",
+        "empty_turn_continuing_after_work": "The turn ended without a closing reply — continuing once from what already ran.",
+        "empty_turn_continuing_after_work_counted": "The turn ended without a closing reply — continuing from what already ran (recovery {{n}} of {{max}}).",
+        "model_access_fallback": "Your account cannot use model {{rejected}} — running on {{model}} instead.",
+        "model_unavailable": "{{model}} isn't offered right now — this session is running on auto instead. Pick another model from the composer, or leave it: your model choice is kept and will be used automatically once it's offered again.",
+        "compaction_continuing": "The context was compacted mid-turn and the response stopped there — continuing automatically."
+      },
       "userMessage": {
         "cancel": "Cancel",
         "cancel_esc": "Cancel (Esc)",

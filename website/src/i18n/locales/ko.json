@@ -11807,6 +11807,28 @@
         "interrupted": "연결이 중단되었습니다",
         "give_up": "연결이 불안정합니다 — 다시 시도해 주세요."
       },
+      "gatewayNotice": {
+        "connection_lost_retrying": "연결이 끊어졌습니다{{detail}} — 다시 시도 중…",
+        "connection_lost_give_up": "연결이 끊어졌습니다{{detail}} — 다시 시도해 주세요.",
+        "session_busy_retrying": "세션이 사용 중입니다 — 다시 시도 중…",
+        "session_busy_give_up": "세션이 사용 중입니다 — 다시 시도해 주세요.",
+        "turn_stalled_recovering": "멈춘 턴을 복구하는 중…",
+        "turn_stalled_give_up": "턴이 멈췄습니다 — 다시 시도해 주세요.",
+        "tool_stalled_recovering": "도구가 멈춘 것 같습니다 — 복구하는 중…",
+        "tool_stalled_give_up": "도구가 멈춘 것 같습니다 — 다시 시도해 주세요.",
+        "session_stuck": "세션이 멈췄습니다{{detail}} — 새 채팅을 시작해 주세요.",
+        "shared_runtime_restarting": "이 채팅이 공유하는 에이전트 프로세스가 계속 다시 시작되었습니다{{detail}} — 다시 시도해 주세요.",
+        "empty_turn_give_up": "이번 턴에 모델이 아무것도 반환하지 않았습니다. 계속하려면 메시지를 다시 보내 주세요.",
+        "empty_turn_after_recovery": "이번 턴에 모델이 아무것도 반환하지 않았습니다(자동 복구를 시도했습니다). 계속하려면 메시지를 다시 보내 주세요.",
+        "empty_turn_after_work": "턴이 마무리 답변 없이 끝났습니다. 메시지를 보내면 멈춘 지점부터 이어집니다 — 완료된 단계는 다시 실행되지 않습니다.",
+        "empty_turn_continuing": "모델이 두 번 연속 아무것도 반환하지 않았습니다 — 한 번 자동으로 계속합니다.",
+        "empty_turn_continuing_counted": "모델이 아무것도 반환하지 않았습니다 — 자동으로 계속합니다(복구 {{n}}/{{max}}).",
+        "empty_turn_continuing_after_work": "턴이 마무리 답변 없이 끝났습니다 — 이미 실행된 내용부터 한 번 계속합니다.",
+        "empty_turn_continuing_after_work_counted": "턴이 마무리 답변 없이 끝났습니다 — 이미 실행된 내용부터 계속합니다(복구 {{n}}/{{max}}).",
+        "model_access_fallback": "이 계정은 {{rejected}} 모델을 사용할 수 없습니다 — 대신 {{model}} 모델로 실행합니다.",
+        "model_unavailable": "지금은 {{model}} 모델이 제공되지 않습니다 — 이 세션은 대신 auto로 실행됩니다. 입력창에서 다른 모델을 고르거나 그대로 두세요. 선택한 모델은 유지되며 다시 제공되면 자동으로 사용됩니다.",
+        "compaction_continuing": "턴 도중 컨텍스트가 압축되어 응답이 거기서 멈췄습니다 — 자동으로 계속합니다."
+      },
       "turnBlock": {
         "earlier_step_other": "이전 단계 {{count}}개",
         "hide_earlier_steps": "이전 단계 숨기기",

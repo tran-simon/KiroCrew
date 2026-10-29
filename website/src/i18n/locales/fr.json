@@ -12169,6 +12169,28 @@
         "interrupted": "Connexion interrompue",
         "give_up": "Connexion instable — veuillez réessayer."
       },
+      "gatewayNotice": {
+        "connection_lost_retrying": "Connexion perdue{{detail}} — nouvelle tentative…",
+        "connection_lost_give_up": "Connexion perdue{{detail}} — réessaie.",
+        "session_busy_retrying": "Session occupée — nouvelle tentative…",
+        "session_busy_give_up": "Session occupée — réessaie.",
+        "turn_stalled_recovering": "Récupération d’un tour bloqué…",
+        "turn_stalled_give_up": "Tour bloqué — réessaie.",
+        "tool_stalled_recovering": "Un outil semble bloqué — récupération…",
+        "tool_stalled_give_up": "Un outil semble bloqué — réessaie.",
+        "session_stuck": "Session bloquée{{detail}} — démarre une nouvelle discussion.",
+        "shared_runtime_restarting": "Le processus d’agent partagé par cette discussion a redémarré à plusieurs reprises{{detail}} — réessaie.",
+        "empty_turn_give_up": "Le modèle n’a rien renvoyé pendant ce tour. Renvoie simplement ton message pour continuer.",
+        "empty_turn_after_recovery": "Le modèle n’a rien renvoyé pendant ce tour (une récupération automatique a été tentée). Renvoie simplement ton message pour continuer.",
+        "empty_turn_after_work": "Le tour s’est terminé sans réponse finale. Envoie un message pour reprendre là où il s’est arrêté — les étapes terminées ne seront pas relancées.",
+        "empty_turn_continuing": "Le modèle n’a rien renvoyé deux fois — poursuite automatique une fois.",
+        "empty_turn_continuing_counted": "Le modèle n’a rien renvoyé — poursuite automatique (récupération {{n}} sur {{max}}).",
+        "empty_turn_continuing_after_work": "Le tour s’est terminé sans réponse finale — poursuite une fois à partir de ce qui a déjà été exécuté.",
+        "empty_turn_continuing_after_work_counted": "Le tour s’est terminé sans réponse finale — poursuite à partir de ce qui a déjà été exécuté (récupération {{n}} sur {{max}}).",
+        "model_access_fallback": "Ton compte ne peut pas utiliser le modèle {{rejected}} — {{model}} est utilisé à la place.",
+        "model_unavailable": "{{model}} n’est pas proposé pour le moment — cette session utilise auto à la place. Choisis un autre modèle dans la zone de saisie, ou laisse tel quel : ton choix de modèle est conservé et sera utilisé automatiquement dès qu’il sera de nouveau proposé.",
+        "compaction_continuing": "Le contexte a été compacté en plein tour et la réponse s’est arrêtée là — poursuite automatique."
+      },
       "turnBlock": {
         "earlier_step_many": "{{count}} étapes précédentes",
         "earlier_step_one": "{{count}} étape précédente",

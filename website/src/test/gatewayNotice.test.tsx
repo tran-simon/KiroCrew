@@ -5,13 +5,14 @@ import { join } from 'node:path'
 import type { ReactElement } from 'react'
 
 import type { ChatMessage } from '../types'
-import { resolveTransientNotice } from '../pages/chat/transientNotice'
+import { resolveGatewayNotice } from '../pages/chat/gatewayNotice'
 import { defaultMessageRenderers, mergeRenderers, resolveRenderer, type MessageRenderContext } from '../app-sdk/messageRenderers'
 import { createTranscriptRenderers } from '../pages/chat/transcriptRenderers'
 import en from '../i18n/locales/en.json'
 
 /**
- * Frontend half of the transient-5xx notice contract. The gateway appends an
+ * Frontend half of the gateway status-row notice contract, starting with the
+ * transient-5xx family; the other families are pinned further down. The gateway appends an
  * `error` row per retry attempt carrying a `meta.notice` wire token (its English
  * content is only the channel/SSE fallback); the dashboard keys localized copy on
  * the token. Pinned here: token → copy; a pending retry renders as a soft
@@ -30,6 +31,7 @@ import en from '../i18n/locales/en.json'
  */
 
 const COPY = en.pages.chat.transientNotice
+const GN = en.pages.chat.gatewayNotice
 
 const msg = (role: string, over: Partial<ChatMessage> = {}): ChatMessage =>
   ({ role, content: '', cls: '', ...over }) as ChatMessage
@@ -50,31 +52,31 @@ const legacyResumingTerminal = msg('error', { content: '⟳ Backend hiccup — r
 const legacyGiveUp = msg('error', { content: '⟳ Backend hiccup — please retry.' })
 const unrelated = msg('error', { content: '❌ Something else entirely' })
 
-describe('resolveTransientNotice', () => {
+describe('resolveGatewayNotice', () => {
   it('maps the pending shapes to localized NoticeCard copy in the warn tone', () => {
-    expect(resolveTransientNotice(retrying, [retrying], 0)).toEqual({ text: COPY.retrying, card: 'notice', tone: 'warn' })
-    expect(resolveTransientNotice(resuming, [resuming], 0)).toEqual({ text: COPY.resuming, card: 'notice', tone: 'warn' })
+    expect(resolveGatewayNotice(retrying, [retrying], 0)).toEqual({ text: COPY.retrying, card: 'notice', tone: 'warn' })
+    expect(resolveGatewayNotice(resuming, [resuming], 0)).toEqual({ text: COPY.resuming, card: 'notice', tone: 'warn' })
   })
 
   it('keeps the terminal shape on the red ErrorCard, localized', () => {
-    expect(resolveTransientNotice(giveUp, [giveUp], 0)).toEqual({ text: COPY.give_up, card: 'error' })
+    expect(resolveGatewayNotice(giveUp, [giveUp], 0)).toEqual({ text: COPY.give_up, card: 'error' })
   })
 
   it('classifies token-less history rows the way their gateway did', () => {
     // Persisted rows are re-read on every reload; no migration rewrites them.
-    expect(resolveTransientNotice(legacyRetrying, [legacyRetrying], 0)?.text).toBe(COPY.retrying)
-    expect(resolveTransientNotice(legacyResumingQueued, [legacyResumingQueued], 0)).toEqual({ text: COPY.resuming, card: 'notice', tone: 'warn' })
+    expect(resolveGatewayNotice(legacyRetrying, [legacyRetrying], 0)?.text).toBe(COPY.retrying)
+    expect(resolveGatewayNotice(legacyResumingQueued, [legacyResumingQueued], 0)).toEqual({ text: COPY.resuming, card: 'notice', tone: 'warn' })
     // No retry kind = nothing was re-queued: terminal, never a pending notice.
-    expect(resolveTransientNotice(legacyResumingTerminal, [legacyResumingTerminal], 0)).toEqual({ text: COPY.give_up, card: 'error' })
-    expect(resolveTransientNotice(legacyGiveUp, [legacyGiveUp], 0)).toEqual({ text: COPY.give_up, card: 'error' })
+    expect(resolveGatewayNotice(legacyResumingTerminal, [legacyResumingTerminal], 0)).toEqual({ text: COPY.give_up, card: 'error' })
+    expect(resolveGatewayNotice(legacyGiveUp, [legacyGiveUp], 0)).toEqual({ text: COPY.give_up, card: 'error' })
   })
 
   it('settles a pending notice to "restored" once an assistant row follows it', () => {
     const list = [retrying, msg('assistant', { content: 'the answer' })]
-    expect(resolveTransientNotice(retrying, list, 0)).toEqual({ text: COPY.restored, card: 'notice', tone: 'info' })
+    expect(resolveGatewayNotice(retrying, list, 0)).toEqual({ text: COPY.restored, card: 'notice', tone: 'info' })
     // A live stream counts too — the model is answering again.
     const live = [resuming, msg('streaming', { content: 'partial…' })]
-    expect(resolveTransientNotice(resuming, live, 0)?.text).toBe(COPY.restored)
+    expect(resolveGatewayNotice(resuming, live, 0)?.text).toBe(COPY.restored)
   })
 
   const INTERRUPTED = { text: COPY.interrupted, card: 'notice', tone: 'info' }
@@ -82,28 +84,28 @@ describe('resolveTransientNotice', () => {
   it('stays pending (present tense, warn) while nothing has closed the window', () => {
     // Only a tool row so far: the ladder may still be driving.
     const list = [retrying, msg('tool', { content: 'tool output' })]
-    expect(resolveTransientNotice(retrying, list, 0)).toEqual({ text: COPY.retrying, card: 'notice', tone: 'warn' })
+    expect(resolveGatewayNotice(retrying, list, 0)).toEqual({ text: COPY.retrying, card: 'notice', tone: 'warn' })
     // An assistant row ABOVE it proves nothing: only later rows settle a recovery.
     const above = [msg('assistant', { content: 'earlier' }), retrying]
-    expect(resolveTransientNotice(retrying, above, 1)?.text).toBe(COPY.retrying)
+    expect(resolveGatewayNotice(retrying, above, 1)?.text).toBe(COPY.retrying)
   })
 
   it('settles to the past-tense "interrupted" when the ladder gives up', () => {
     // [retrying, giveUp]: the pending row above the red give-up does not read
     // as a retry still in progress — and never as "restored".
-    expect(resolveTransientNotice(retrying, [retrying, giveUp], 0)).toEqual(INTERRUPTED)
-    expect(resolveTransientNotice(resuming, [resuming, giveUp], 0)).toEqual(INTERRUPTED)
+    expect(resolveGatewayNotice(retrying, [retrying, giveUp], 0)).toEqual(INTERRUPTED)
+    expect(resolveGatewayNotice(resuming, [resuming, giveUp], 0)).toEqual(INTERRUPTED)
     // Every pending link of the same ladder settles together.
     const chain = [retrying, retrying, resuming, giveUp]
-    for (const i of [0, 1, 2]) expect(resolveTransientNotice(chain[i], chain, i)).toEqual(INTERRUPTED)
+    for (const i of [0, 1, 2]) expect(resolveGatewayNotice(chain[i], chain, i)).toEqual(INTERRUPTED)
     // The give-up row itself stays the red ErrorCard.
-    expect(resolveTransientNotice(giveUp, chain, 3)).toEqual({ text: COPY.give_up, card: 'error' })
+    expect(resolveGatewayNotice(giveUp, chain, 3)).toEqual({ text: COPY.give_up, card: 'error' })
   })
 
   it('settles to "interrupted" when any other error closes the window', () => {
     // [retrying, ❌]: the recovery failed some other way.
     const list = [retrying, msg('error', { content: '❌ Internal error' })]
-    expect(resolveTransientNotice(retrying, list, 0)).toEqual(INTERRUPTED)
+    expect(resolveGatewayNotice(retrying, list, 0)).toEqual(INTERRUPTED)
   })
 
   it('scans past another re-queued recovery row (a dead process) to the outcome it reaches', () => {
@@ -112,9 +114,9 @@ describe('resolveTransientNotice', () => {
     // recovery, so it neither settles the notice nor hides the later outcome.
     const processLost = msg('error', { content: '⟳ Connection lost — retrying…', meta: { kind: 'transient_retry' } } as Partial<ChatMessage>)
     const PENDING = { text: COPY.retrying, card: 'notice', tone: 'warn' }
-    expect(resolveTransientNotice(retrying, [retrying, processLost], 0)).toEqual(PENDING)
-    expect(resolveTransientNotice(retrying, [retrying, processLost, msg('assistant', { content: 'ok' })], 0)?.text).toBe(COPY.restored)
-    expect(resolveTransientNotice(retrying, [retrying, processLost, giveUp], 0)).toEqual(INTERRUPTED)
+    expect(resolveGatewayNotice(retrying, [retrying, processLost], 0)).toEqual(PENDING)
+    expect(resolveGatewayNotice(retrying, [retrying, processLost, msg('assistant', { content: 'ok' })], 0)?.text).toBe(COPY.restored)
+    expect(resolveGatewayNotice(retrying, [retrying, processLost, giveUp], 0)).toEqual(INTERRUPTED)
   })
 
   it('leaves an ABANDONED recovery pending: a user row proves neither outcome', () => {
@@ -125,9 +127,9 @@ describe('resolveTransientNotice', () => {
     // would be unproven). The row keeps its present-tense pending copy.
     const PENDING = { text: COPY.retrying, card: 'notice', tone: 'warn' }
     const abandoned = [retrying, msg('user', { content: 'hello?' }), msg('assistant', { content: 'hi' })]
-    expect(resolveTransientNotice(retrying, abandoned, 0)).toEqual(PENDING)
-    expect(resolveTransientNotice(retrying, [retrying, msg('user', { content: 'still there?' })], 0)).toEqual(PENDING)
-    expect(resolveTransientNotice(resuming, [resuming, msg('user', { content: 'x' })], 0)?.text).toBe(COPY.resuming)
+    expect(resolveGatewayNotice(retrying, abandoned, 0)).toEqual(PENDING)
+    expect(resolveGatewayNotice(retrying, [retrying, msg('user', { content: 'still there?' })], 0)).toEqual(PENDING)
+    expect(resolveGatewayNotice(resuming, [resuming, msg('user', { content: 'x' })], 0)?.text).toBe(COPY.resuming)
   })
 
   it('scopes the scan to THIS recovery: a failed retry never reads "restored" off a later turn', () => {
@@ -139,10 +141,10 @@ describe('resolveTransientNotice', () => {
       msg('user', { content: 'never mind, something else' }),
       msg('assistant', { content: 'answer to the unrelated turn' }),
     ]
-    expect(resolveTransientNotice(retrying, failedThenUnrelated, 0)).toEqual(INTERRUPTED)
+    expect(resolveGatewayNotice(retrying, failedThenUnrelated, 0)).toEqual(INTERRUPTED)
     // The terminal give-up row closes the window the same way.
     const gaveUpThenUnrelated = [resuming, giveUp, msg('user', { content: 'again' }), msg('assistant', { content: 'ok' })]
-    expect(resolveTransientNotice(resuming, gaveUpThenUnrelated, 0)).toEqual(INTERRUPTED)
+    expect(resolveGatewayNotice(resuming, gaveUpThenUnrelated, 0)).toEqual(INTERRUPTED)
   })
 
   it('keeps one copy set for the pending pair: two states, two strings that name their object', () => {
@@ -158,33 +160,33 @@ describe('resolveTransientNotice', () => {
     expect(COPY.restored).toBe('Connection restored')
     expect(COPY.interrupted).toBe('Connection interrupted')
     // And the frontend draws each shape with its own string.
-    expect(resolveTransientNotice(retrying, [retrying], 0)?.text).toBe(COPY.retrying)
-    expect(resolveTransientNotice(resuming, [resuming], 0)?.text).toBe(COPY.resuming)
+    expect(resolveGatewayNotice(retrying, [retrying], 0)?.text).toBe(COPY.retrying)
+    expect(resolveGatewayNotice(resuming, [resuming], 0)?.text).toBe(COPY.resuming)
   })
 
   it('settles every link of one ladder together when the answer finally lands', () => {
     // Two 5xx attempts in a row append two pending rows before the answer; both
     // belong to the same recovery, so neither is stuck on "retrying…".
     const chain = [retrying, retrying, resuming, msg('assistant', { content: 'finally' })]
-    expect(resolveTransientNotice(retrying, chain, 0)?.text).toBe(COPY.restored)
-    expect(resolveTransientNotice(retrying, chain, 1)?.text).toBe(COPY.restored)
-    expect(resolveTransientNotice(resuming, chain, 2)?.text).toBe(COPY.restored)
+    expect(resolveGatewayNotice(retrying, chain, 0)?.text).toBe(COPY.restored)
+    expect(resolveGatewayNotice(retrying, chain, 1)?.text).toBe(COPY.restored)
+    expect(resolveGatewayNotice(resuming, chain, 2)?.text).toBe(COPY.restored)
     // Transparent rows (tool output) in between do not close the window.
     const withTool = [retrying, msg('tool', { content: 'tool output' }), msg('assistant', { content: 'done' })]
-    expect(resolveTransientNotice(retrying, withTool, 0)?.text).toBe(COPY.restored)
+    expect(resolveGatewayNotice(retrying, withTool, 0)?.text).toBe(COPY.restored)
   })
 
   it('never settles the terminal shape', () => {
     const list = [giveUp, msg('assistant', { content: 'a later, unrelated turn' })]
-    expect(resolveTransientNotice(giveUp, list, 0)?.text).toBe(COPY.give_up)
+    expect(resolveGatewayNotice(giveUp, list, 0)?.text).toBe(COPY.give_up)
   })
 
   it('leaves every other error row alone (verbatim prose is the contract)', () => {
-    expect(resolveTransientNotice(unrelated, [unrelated], 0)).toBeNull()
+    expect(resolveGatewayNotice(unrelated, [unrelated], 0)).toBeNull()
     // The token only means something on an `error` row.
-    expect(resolveTransientNotice(msg('notice', { meta: { notice: 'transient_retrying' } } as Partial<ChatMessage>), [], 0)).toBeNull()
+    expect(resolveGatewayNotice(msg('notice', { meta: { notice: 'transient_retrying' } } as Partial<ChatMessage>), [], 0)).toBeNull()
     // An unknown token is not ours either.
-    expect(resolveTransientNotice(msg('error', { content: 'x', meta: { notice: 'something_else' } } as Partial<ChatMessage>), [], 0)).toBeNull()
+    expect(resolveGatewayNotice(msg('error', { content: 'x', meta: { notice: 'something_else' } } as Partial<ChatMessage>), [], 0)).toBeNull()
   })
 })
 
@@ -206,7 +208,7 @@ const mainRegistry = mergeRenderers(createTranscriptRenderers({ slot: 's1', cont
 
 function renderWith(registry: typeof defaultMessageRenderers, m: ChatMessage, over?: Partial<MessageRenderContext>) {
   const entry = resolveRenderer(m, registry)
-  expect(entry?.id).toBe('error')
+  expect(entry?.id).toBe(m.role)
   return render(<>{entry!.render(m, ctx({ messages: [m], ...over }))}</>)
 }
 
@@ -274,20 +276,89 @@ describe('the terminal shape keeps the single-chat Continue affordance', () => {
   })
 })
 
-describe('wire parity with the gateway constants', () => {
-  // `TRANSIENT_NOTICE_<NAME> = "<token>"` at column 0 in chat_utils.py (the META_KEY
-  // entry names the meta field, not a token); every token must be known to the
-  // frontend or its row falls back to raw English on every locale.
-  const py = readFileSync(join(__dirname, '../../../src/kiro_crew/dashboard/chat_utils.py'), 'utf8')
-  const backend = [...py.matchAll(/^TRANSIENT_NOTICE_(?!META_KEY)[A-Z_]+\s*=\s*"([^"]+)"/gm)].map((m) => m[1])
-  const metaKey = /^TRANSIENT_NOTICE_META_KEY\s*=\s*"([^"]+)"/m.exec(py)?.[1]
+describe('the other gateway status-row families', () => {
+  const errorRow = (notice: string, args?: Record<string, unknown>) =>
+    msg('error', { content: `fallback prose for ${notice}`, meta: { notice, ...(args ? { notice_args: args } : {}) } } as Partial<ChatMessage>)
+  const noticeRow = (notice: string, args?: Record<string, unknown>) =>
+    msg('notice', { content: `fallback prose for ${notice}`, meta: { kind: 'empty_turn_notice', notice, ...(args ? { notice_args: args } : {}) } } as Partial<ChatMessage>)
 
-  it('finds the three backend tokens and the meta field name the frontend reads', () => {
-    expect(backend).toHaveLength(3)
-    expect(metaKey).toBe('notice')
+  it('keeps a recovery row on the red ErrorCard with localized copy and its Resume wording', () => {
+    expect(resolveGatewayNotice(errorRow('session_busy_give_up'), [], 0)).toEqual({
+      card: 'error',
+      text: GN.session_busy_give_up,
+      resumeText: en.pages.chat.errorCard.retry_session_busy,
+    })
+    expect(resolveGatewayNotice(errorRow('session_stuck'), [], 0)).toEqual({ card: 'error', text: GN.session_stuck.replace('{{detail}}', '') })
   })
 
-  it.each(backend)('the frontend resolves token %s', (token) => {
-    expect(resolveTransientNotice(msg('error', { content: 'x', meta: { notice: token } } as Partial<ChatMessage>), [], 0)).not.toBeNull()
+  it('interpolates the exit code a connection-lost row carries', () => {
+    const row = errorRow('connection_lost_give_up', { exit_code: -9 })
+    expect(resolveGatewayNotice(row, [row], 0)).toMatchObject({ card: 'error', text: 'Connection lost (exit -9) — please retry.' })
+  })
+
+  it('draws an empty-response or model-fallback row as a NoticeCard in its tone', () => {
+    expect(resolveGatewayNotice(noticeRow('empty_turn_give_up'), [], 0)).toEqual({ card: 'notice', text: GN.empty_turn_give_up, tone: 'info' })
+    expect(resolveGatewayNotice(noticeRow('empty_turn_continuing', { n: 2, max: 3 }), [], 0)?.text).toBe(
+      'The model returned nothing — auto-continuing (recovery 2 of 3).',
+    )
+    expect(resolveGatewayNotice(noticeRow('empty_turn_continuing'), [], 0)?.text).toBe(GN.empty_turn_continuing)
+    expect(resolveGatewayNotice(noticeRow('model_access_fallback', { rejected: 'big', model: 'small' }), [], 0)).toEqual({
+      card: 'notice',
+      text: 'Your account cannot use model big — running on small instead.',
+      tone: 'warn',
+    })
+  })
+
+  it('classifies pre-token history rows of every family by their wording', () => {
+    const legacy = (role: string, content: string) => msg(role, { content })
+    expect(resolveGatewayNotice(legacy('error', '⟳ Turn stalled — please retry.'), [], 0)?.text).toBe(GN.turn_stalled_give_up)
+    expect(resolveGatewayNotice(legacy('error', '⟳ Connection lost (exit 1) — retrying...'), [], 0)?.text).toBe(
+      'Connection lost (exit 1) — retrying…',
+    )
+    expect(resolveGatewayNotice(legacy('notice', 'ℹ The model returned nothing this turn. Just send your message again to continue.'), [], 0)?.text).toBe(
+      GN.empty_turn_give_up,
+    )
+    expect(resolveGatewayNotice(legacy('notice', "⚠ Your account cannot use model 'a' — running on 'b' instead."), [], 0)?.text).toBe(
+      'Your account cannot use model a — running on b instead.',
+    )
+    // A wording only means something on its own role.
+    expect(resolveGatewayNotice(legacy('notice', '⟳ Turn stalled — please retry.'), [], 0)).toBeNull()
+    // Any other notice keeps its own text.
+    expect(resolveGatewayNotice(legacy('notice', 'ℹ Something else'), [], 0)).toBeNull()
+  })
+
+  it.each([
+    ['main transcript registry', mainRegistry],
+    ['app-sdk default registry', defaultMessageRenderers],
+  ])('%s draws a gateway notice row with localized copy, never the fallback prose', (_name, registry) => {
+    renderWith(registry, noticeRow('empty_turn_after_work'))
+    expect(screen.getByTestId('notice-card')).toHaveTextContent(GN.empty_turn_after_work)
+    expect(screen.queryByText(/fallback prose/)).toBeNull()
+    cleanup()
+  })
+})
+
+describe('wire parity with the gateway constants', () => {
+  // `TRANSIENT_NOTICE_<NAME>` in chat_utils.py and `GATEWAY_NOTICE_<NAME>` in
+  // gateway_notice.py, at column 0 (the META_KEY / ARGS_KEY entries name meta
+  // fields, not tokens); every token must be known to the frontend on exactly
+  // one row role, or its row falls back to raw English on every locale.
+  const read = (file: string) => readFileSync(join(__dirname, '../../../src/kiro_crew/dashboard', file), 'utf8')
+  const sources = [read('chat_utils.py'), read('gateway_notice.py')]
+  const backend = sources.flatMap((py) =>
+    [...py.matchAll(/^(?:TRANSIENT|GATEWAY)_NOTICE_(?!META_KEY|ARGS_KEY)[A-Z_]+\s*=\s*"([^"]+)"/gm)].map((m) => m[1]),
+  )
+  const metaKeys = sources.flatMap((py) => [...py.matchAll(/^(?:TRANSIENT|GATEWAY)_NOTICE_META_KEY\s*=\s*"([^"]+)"/gm)].map((m) => m[1]))
+
+  it('finds every backend token and the one meta field name the frontend reads', () => {
+    expect(backend).toHaveLength(21)
+    expect(new Set(metaKeys)).toEqual(new Set(['notice']))
+  })
+
+  it.each(backend)('the frontend resolves token %s on exactly one role', (token) => {
+    const resolvedOn = ['error', 'notice'].filter(
+      (role) => resolveGatewayNotice(msg(role, { content: 'x', meta: { notice: token } } as Partial<ChatMessage>), [], 0) !== null,
+    )
+    expect(resolvedOn).toHaveLength(1)
   })
 })

@@ -797,14 +797,23 @@ async def _requeue_after_prompt_busy(
     ``_queue_recovery`` takes no Stop snapshot of its own, so this gate is the
     only place it can veto the replay (the same pairing as the other arms).
     """
+    from kiro_crew.dashboard import gateway_notice as gn
+
     if _should_suppress_requeue(slot) or _stop_pressed():
         pass
     elif _prompt_depth == 0 and slot._prompt_busy_retries <= 3:
         # Single emit: slot.append persists + broadcasts one chat_message
         # via _on_message (see the note in ``_on_process_died``); no explicit
         # broadcast_ws or the UI shows a duplicate card.
-        _retry_msg = "⟳ Session busy — retrying…"
-        slot.append("error", _retry_msg, "msg msg-err", meta={"kind": TRANSIENT_RETRY_KIND})
+        slot.append(
+            "error",
+            gn.GATEWAY_SESSION_BUSY_RETRYING_TEXT,
+            "msg msg-err",
+            meta={
+                "kind": TRANSIENT_RETRY_KIND,
+                **gn.gateway_notice_meta(gn.GATEWAY_NOTICE_SESSION_BUSY_RETRYING),
+            },
+        )
         _requeue_text, _requeue_payload = build_recovery_requeue(
             message,
             _turn_emitted,
@@ -818,11 +827,21 @@ async def _requeue_after_prompt_busy(
             payload=_requeue_payload,
         )
     elif slot._prompt_busy_retries > 3:
-        slot.append("error", "Session stuck — please start a new chat.", "msg msg-err")
+        slot.append(
+            "error",
+            gn.GATEWAY_SESSION_STUCK_TEXT,
+            "msg msg-err",
+            meta=gn.gateway_notice_meta(gn.GATEWAY_NOTICE_SESSION_STUCK),
+        )
     else:
         # depth>0 with budget remaining: no re-queue (mirrors AcpProcessDied),
         # but still surface feedback so the nested turn doesn't fail silently.
-        slot.append("error", "⟳ Session busy — please retry.", "msg msg-err")
+        slot.append(
+            "error",
+            gn.GATEWAY_SESSION_BUSY_GIVE_UP_TEXT,
+            "msg msg-err",
+            meta=gn.gateway_notice_meta(gn.GATEWAY_NOTICE_SESSION_BUSY_GIVE_UP),
+        )
 
 
 _REFUSAL_CARD_LEAD = "Response declined by the model."

@@ -11807,6 +11807,28 @@
         "interrupted": "接続が中断されました",
         "give_up": "接続が不安定です — もう一度お試しください。"
       },
+      "gatewayNotice": {
+        "connection_lost_retrying": "接続が切断されました{{detail}} — 再試行中…",
+        "connection_lost_give_up": "接続が切断されました{{detail}} — もう一度お試しください。",
+        "session_busy_retrying": "セッションが使用中です — 再試行中…",
+        "session_busy_give_up": "セッションが使用中です — もう一度お試しください。",
+        "turn_stalled_recovering": "停止したターンを復旧しています…",
+        "turn_stalled_give_up": "ターンが停止しました — もう一度お試しください。",
+        "tool_stalled_recovering": "ツールが停止したようです — 復旧しています…",
+        "tool_stalled_give_up": "ツールが停止したようです — もう一度お試しください。",
+        "session_stuck": "セッションが動かなくなりました{{detail}} — 新しいチャットを開始してください。",
+        "shared_runtime_restarting": "このチャットが共有するエージェントプロセスが再起動を繰り返しました{{detail}} — もう一度お試しください。",
+        "empty_turn_give_up": "このターンでモデルから何も返されませんでした。続けるには、メッセージをもう一度送信してください。",
+        "empty_turn_after_recovery": "このターンでモデルから何も返されませんでした（自動復旧を試みました）。続けるには、メッセージをもう一度送信してください。",
+        "empty_turn_after_work": "ターンは最終的な返答なしで終了しました。メッセージを送信すると停止した箇所から続きます — 完了したステップは再実行されません。",
+        "empty_turn_continuing": "モデルから2回続けて何も返されませんでした — 1回だけ自動で続行します。",
+        "empty_turn_continuing_counted": "モデルから何も返されませんでした — 自動で続行します（復旧 {{n}}/{{max}}）。",
+        "empty_turn_continuing_after_work": "ターンは最終的な返答なしで終了しました — 実行済みの内容から1回だけ続行します。",
+        "empty_turn_continuing_after_work_counted": "ターンは最終的な返答なしで終了しました — 実行済みの内容から続行します（復旧 {{n}}/{{max}}）。",
+        "model_access_fallback": "このアカウントではモデル「{{rejected}}」を使用できません — 代わりに「{{model}}」で実行しています。",
+        "model_unavailable": "「{{model}}」は現在提供されていません — このセッションは代わりに auto で実行しています。入力欄から別のモデルを選ぶか、このままにしてください。選択したモデルは保持され、再び提供されると自動的に使用されます。",
+        "compaction_continuing": "ターンの途中でコンテキストが圧縮され、応答がそこで止まりました — 自動で続行します。"
+      },
       "turnBlock": {
         "earlier_step_other": "以前の {{count}} ステップ",
         "hide_earlier_steps": "以前のステップを非表示",

@@ -12169,6 +12169,28 @@
         "interrupted": "Connessione interrotta",
         "give_up": "Connessione instabile — riprova."
       },
+      "gatewayNotice": {
+        "connection_lost_retrying": "Connessione persa{{detail}} — nuovo tentativo…",
+        "connection_lost_give_up": "Connessione persa{{detail}} — riprova.",
+        "session_busy_retrying": "Sessione occupata — nuovo tentativo…",
+        "session_busy_give_up": "Sessione occupata — riprova.",
+        "turn_stalled_recovering": "Ripristino di un turno bloccato…",
+        "turn_stalled_give_up": "Turno bloccato — riprova.",
+        "tool_stalled_recovering": "Uno strumento sembra bloccato — ripristino…",
+        "tool_stalled_give_up": "Uno strumento sembra bloccato — riprova.",
+        "session_stuck": "Sessione bloccata{{detail}} — avvia una nuova chat.",
+        "shared_runtime_restarting": "Il processo dell’agente condiviso da questa chat si è riavviato più volte{{detail}} — riprova.",
+        "empty_turn_give_up": "Il modello non ha restituito nulla in questo turno. Invia di nuovo il messaggio per continuare.",
+        "empty_turn_after_recovery": "Il modello non ha restituito nulla in questo turno (è stato tentato un ripristino automatico). Invia di nuovo il messaggio per continuare.",
+        "empty_turn_after_work": "Il turno è terminato senza una risposta finale. Invia un messaggio per continuare da dove si è fermato — i passaggi completati non verranno ripetuti.",
+        "empty_turn_continuing": "Il modello non ha restituito nulla due volte — continuo automaticamente una volta.",
+        "empty_turn_continuing_counted": "Il modello non ha restituito nulla — continuo automaticamente (ripristino {{n}} di {{max}}).",
+        "empty_turn_continuing_after_work": "Il turno è terminato senza una risposta finale — continuo una volta da ciò che è già stato eseguito.",
+        "empty_turn_continuing_after_work_counted": "Il turno è terminato senza una risposta finale — continuo da ciò che è già stato eseguito (ripristino {{n}} di {{max}}).",
+        "model_access_fallback": "Il tuo account non può usare il modello {{rejected}} — al suo posto è in uso {{model}}.",
+        "model_unavailable": "{{model}} non è disponibile al momento — questa sessione usa auto al suo posto. Scegli un altro modello dal compositore, oppure lascia così: la tua scelta del modello resta salvata e verrà usata automaticamente quando sarà di nuovo disponibile.",
+        "compaction_continuing": "Il contesto è stato compattato a metà turno e la risposta si è fermata lì — continuo automaticamente."
+      },
       "turnBlock": {
         "earlier_step_many": "{{count}} passaggi precedenti",
         "earlier_step_one": "{{count}} passaggio precedente",

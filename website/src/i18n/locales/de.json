@@ -11988,6 +11988,28 @@
         "interrupted": "Verbindung unterbrochen",
         "give_up": "Verbindung instabil — bitte erneut versuchen."
       },
+      "gatewayNotice": {
+        "connection_lost_retrying": "Verbindung verloren{{detail}} — wird erneut versucht…",
+        "connection_lost_give_up": "Verbindung verloren{{detail}} — bitte erneut versuchen.",
+        "session_busy_retrying": "Sitzung beschäftigt — wird erneut versucht…",
+        "session_busy_give_up": "Sitzung beschäftigt — bitte erneut versuchen.",
+        "turn_stalled_recovering": "Eine hängende Runde wird wiederhergestellt…",
+        "turn_stalled_give_up": "Runde hängt — bitte erneut versuchen.",
+        "tool_stalled_recovering": "Ein Werkzeug scheint zu hängen — wird wiederhergestellt…",
+        "tool_stalled_give_up": "Ein Werkzeug scheint zu hängen — bitte erneut versuchen.",
+        "session_stuck": "Sitzung hängt fest{{detail}} — bitte starte einen neuen Chat.",
+        "shared_runtime_restarting": "Der Agent-Prozess, den dieser Chat mitnutzt, wurde wiederholt neu gestartet{{detail}} — bitte erneut versuchen.",
+        "empty_turn_give_up": "Das Modell hat in dieser Runde nichts zurückgegeben. Sende deine Nachricht einfach noch einmal, um weiterzumachen.",
+        "empty_turn_after_recovery": "Das Modell hat in dieser Runde nichts zurückgegeben (eine automatische Wiederherstellung wurde versucht). Sende deine Nachricht einfach noch einmal, um weiterzumachen.",
+        "empty_turn_after_work": "Die Runde endete ohne abschließende Antwort. Sende eine Nachricht, um dort weiterzumachen, wo sie aufgehört hat — abgeschlossene Schritte werden nicht wiederholt.",
+        "empty_turn_continuing": "Das Modell hat zweimal nichts zurückgegeben — es wird einmal automatisch fortgesetzt.",
+        "empty_turn_continuing_counted": "Das Modell hat nichts zurückgegeben — es wird automatisch fortgesetzt (Wiederherstellung {{n}} von {{max}}).",
+        "empty_turn_continuing_after_work": "Die Runde endete ohne abschließende Antwort — es wird einmal ab dem bereits Ausgeführten fortgesetzt.",
+        "empty_turn_continuing_after_work_counted": "Die Runde endete ohne abschließende Antwort — es wird ab dem bereits Ausgeführten fortgesetzt (Wiederherstellung {{n}} von {{max}}).",
+        "model_access_fallback": "Dein Konto kann das Modell {{rejected}} nicht verwenden — stattdessen läuft {{model}}.",
+        "model_unavailable": "{{model}} wird gerade nicht angeboten — diese Sitzung läuft stattdessen auf Auto. Wähle im Eingabefeld ein anderes Modell oder lass es so: Deine Modellwahl bleibt erhalten und wird automatisch verwendet, sobald es wieder angeboten wird.",
+        "compaction_continuing": "Der Kontext wurde mitten in der Runde komprimiert und die Antwort hat dort aufgehört — es wird automatisch fortgesetzt."
+      },
       "turnBlock": {
         "earlier_step_one": "{{count}} früherer Schritt",
         "earlier_step_other": "{{count}} frühere Schritte",
