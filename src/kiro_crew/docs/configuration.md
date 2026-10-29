@@ -692,6 +692,7 @@ member-memory sandbox is required.
 | Key | Description | Default |
 |-----|-------------|---------|
 | `work_ledger.max_depth` | How many levels of the work ledger may conduct. Depth 0 is the root conductor, so `2` lets it dispatch one level of conductors whose own items are workers, and `3` lets those conductors dispatch conductors of their own. Accepted range 2-10; a value outside it is refused at load with a warning and the default applies, it is never clamped. Each extra level multiplies sessions (three levels of three items is 27), so raise it only where concurrency is already capped per level. Lowering it leaves open ledgers alone, but new ledgers and new items at the levels it removes are refused. | `2` |
+| `work_ledger.remote_dispatch` | Feature Preview for remote dispatch (`rfc-conductor-remote-dispatch`). On, a hub's conductor can create a worker session on this crew that is born bound to the hub's work item (`POST /api/chat/slots` with `work_item`), then read its reports and send a decision (`GET`/`PATCH /api/chat/slots/{slot}/work-item`). Off, `work_item` is ignored and both routes answer 404. Read per request, so a change needs no restart. | `false` |
 
 ### Power
 

@@ -5366,7 +5366,8 @@
       "hasChildren": true,
       "enumValues": null,
       "defaultValue": {
-        "max_depth": 2
+        "max_depth": 2,
+        "remote_dispatch": false
       }
     },
     {
@@ -5382,6 +5383,20 @@
       "hasChildren": false,
       "enumValues": null,
       "defaultValue": 2
+    },
+    {
+      "path": "work_ledger.remote_dispatch",
+      "kind": "core",
+      "type": "boolean",
+      "required": false,
+      "deprecated": false,
+      "sensitive": false,
+      "tags": [],
+      "label": "Remote dispatch (Feature Preview)",
+      "help": "Feature Preview, off by default: lets a conductor on a connected hub create worker sessions on this crew that are born bound to the hub's work item, and read their reports back. Off, a slot create ignores its work_item and the per-slot work-item routes answer 404. Read per request, so a change needs no restart.",
+      "hasChildren": false,
+      "enumValues": null,
+      "defaultValue": false
     },
     {
       "path": "power",

@@ -360,6 +360,17 @@ class WorkLedgerConfig:
             "at the levels it removes are refused.",
         ),
     )
+    remote_dispatch: bool = field(
+        default=False,
+        metadata=_meta(
+            "Remote dispatch (Feature Preview)",
+            "Feature Preview, off by default: lets a conductor on a connected hub "
+            "create worker sessions on this crew that are born bound to the hub's "
+            "work item, and read their reports back. Off, a slot create ignores its "
+            "work_item and the per-slot work-item routes answer 404. Read per "
+            "request, so a change needs no restart.",
+        ),
+    )
 
 
 #: ``power.on_battery`` values. ``normal`` ignores the power source.

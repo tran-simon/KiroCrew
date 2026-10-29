@@ -76,7 +76,7 @@ def test_config_refuses_an_out_of_range_value_and_keeps_the_default(
 
 def test_the_setting_round_trips_through_to_dict(tmp_path: Path):
     _write_config(tmp_path, {"max_depth": 4})
-    assert KiroCrewConfig.load().to_dict()["work_ledger"] == {"max_depth": 4}
+    assert KiroCrewConfig.load().to_dict()["work_ledger"]["max_depth"] == 4
 
 
 # ── no environment override ───────────────────────────────────────────────
