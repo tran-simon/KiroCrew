@@ -31,6 +31,7 @@ if TYPE_CHECKING:
         effort_drop_reason,
         effort_pending_note,
         internal_memory_scope,
+        parent_project_dirs,
         parent_template_allowlists,
         parent_work_supported,
         spawn_parent_claim,
@@ -235,6 +236,13 @@ async def api_spawn(request: web.Request) -> web.Response:
         body = await request.json()
     except Exception:
         return web.json_response({"error": "invalid JSON"}, status=400)
+    # The parent's project scope, read as soon as the request names its parent
+    # and before any later await (the backend probe, the memory-scope and
+    # record reads), so a parent session that ends meanwhile cannot shrink the
+    # scope the gate checks now and the queued row records. Dict reads only;
+    # a non-string parent is refused below and reads no scope here.
+    asked_parent = body.get("parent_session", "")
+    parent_dirs = list(parent_project_dirs(asked_parent)) if isinstance(asked_parent, str) else []
     try:
         cleaned = validate_tool_args(
             {
@@ -346,7 +354,10 @@ async def api_spawn(request: web.Request) -> web.Response:
             (
                 parent_execution.template_id,
                 await asyncio.to_thread(
-                    parent_template_allowlists, parent_session, parent_execution.template_id
+                    parent_template_allowlists,
+                    parent_session,
+                    parent_execution.template_id,
+                    parent_dirs,
                 ),
             )
             if parent_execution is not None
@@ -415,6 +426,7 @@ async def api_spawn(request: web.Request) -> web.Response:
         _memory_mode=admitted_mode,
         _execution_context=admitted_execution.to_record(),
         _parent_spawn_policy=parent_spawn_policy,
+        _parent_project_dirs=parent_dirs,
     )
     if not info:
         # Reached mgr.spawn (submission COUNTED at the top of spawn()) but
